@@ -1,0 +1,4 @@
+aiohttp==3.8.4
+EbookLib==0.18
+lxml==4.9.2
+pydantic==1.10.9
