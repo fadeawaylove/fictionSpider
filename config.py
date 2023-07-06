@@ -38,11 +38,21 @@ SOURCE_LIST = [
     FictionSourceModel(
         name="养鬼为祸",
         home="http://www.xygwh.cc",
-        # cover_xpath='/html/body/div[4]/div[2]/div[1]/img/@src',
         list_xpath='//div[@class="listmain"]/dl/dd[position() > 9]/a',
         content_xpath='//*[@id="content"]',
         replace_string_list=["请记住本书首发域名：www.yangguiweihuo.com。笔趣阁手机版阅读网址：m.yangguiweihuo.com",
                              '<div align="center"><a href="javascript:posterror();" style="text-align:center;color:red;">章节错误,点此举报(免注册)我们会尽快处理.</a>举报后请耐心等待,并刷新页面。</div>']
+    ),
+    FictionSourceModel(
+        name="飘天文学",
+        home="https://www.xpiaotian.com",
+        list_xpath='//*[@id="list"]/dl/dd[position()>12]/a',
+        content_xpath='//*[@id="content"]',
+        replace_string_list=[
+            "章节报错（免登陆）"
+        ],
+        ext_headers={"Referer": "https://www.beqege.com"},
+
     ),
 ]
 

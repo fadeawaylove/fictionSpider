@@ -56,7 +56,7 @@ def get_source_model(url: str):
 
 class FictionSpider:
 
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, output_name="", is_test=False, test_cnt=5):
 
         self.source_model = get_source_model(base_url)
         if not self.source_model:
@@ -67,7 +67,9 @@ class FictionSpider:
         self.base_url = base_url
         self.host = parsed_url.scheme + "://" + parsed_url.netloc
         self.sem_count = self.source_model.rate_count
-        self.name = None
+        self.name = output_name
+        self.is_test = is_test
+        self.test_cnt = test_cnt
         self.epub_book = epub.EpubBook()
         self.chapter_name_set = set()
         self.headers = {
@@ -77,6 +79,8 @@ class FictionSpider:
 
     def set_title(self, html):
         """尝试获取小说名（标题）"""
+        if self.name:
+            return
         title = html.xpath(self.source_model.title_xpath)
         for t in title:
             if t.text:
@@ -153,6 +157,8 @@ class FictionSpider:
             return False, chapter_name, "重复章节"
         self.chapter_name_set.add(chapter_name)
         chapter_content = await self.get_chapter_content(chapter_url)
+        if self.source_model.begin_title:
+            chapter_content = f"<h2>{chapter_name}</h2>" + chapter_content
         return True, chapter_name, chapter_content
 
     def add_chapter_to_book(self, args):
@@ -171,23 +177,19 @@ class FictionSpider:
         self.pbar.set_postfix_str(f"写入【{chapter_name}】，长度{len(chapter_content)}")
         self.pbar.update(1)
 
-    async def run(self, output_name="", is_test=False, test_cnt=5):
+    async def run(self):
         html = await self.get_chapter_list_html()
 
-        if output_name:
-            self.name = output_name
-        else:
-            self.set_title(html)
-
+        self.set_title(html)
         await self.set_cover(html)
 
         chapter_list = await self.get_chapter_list(html)
         if not chapter_list:
             print("未获取到任何章节！")
             return
-        if is_test:
+        if self.is_test:
             self.name += f"_测试"
-            chapter_list = chapter_list[:test_cnt]
+            chapter_list = chapter_list[:self.test_cnt]
         chapter_cnt = len(chapter_list)
 
         self.pbar = tqdm(total=chapter_cnt, postfix=f"开始采集《{self.name}》", unit="章", desc=f"采集《{self.name}》")
@@ -204,12 +206,3 @@ class FictionSpider:
         out_name = self.get_unique_file_path(os.path.join(dir_name, file_name))
         self.pbar.set_postfix_str(f"合成文件：{out_name}")
         epub.write_epub(out_name, self.epub_book, {})
-
-
-async def __test():
-    spider = FictionSpider("http://www.xygwh.cc/12/12757/")
-    await spider.run(is_test=True)
-
-
-if __name__ == '__main__':
-    asyncio.get_event_loop().run_until_complete(__test())

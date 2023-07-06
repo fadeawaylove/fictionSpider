@@ -13,3 +13,4 @@ class FictionSourceModel(BaseModel):
     replace_string_list: list = []  # 内容中需要替换为空的字符串
     include_tag_list: list = ["div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "br"]  # 内容包含的标签列表，不在此列表中的标签会被移除
     rate_count: int = 20  # 采集速率，每批次采集多少章
+    begin_title: bool = True  # 在章节内容开始加上一个章节名
