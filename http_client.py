@@ -85,8 +85,8 @@ class HttpClient:
             limit = cls._connector.limit
             timeout = cls._session.timeout.total
             print(
-                "%r, %s %s, kwargs %s, connector [_acquired %s, _waiters %s, limit %s, timeout %s]",
-                e, method, url, kwargs, _acquired, _waiters, limit, timeout)
+                "%r, %s %s, kwargs %s, connector [_acquired %s, _waiters %s, limit %s, timeout %s]" % (
+                    e, method, url, kwargs, _acquired, _waiters, limit, timeout))
             raise e
 
     @classmethod

@@ -11,4 +11,4 @@ async def main(url):
 
 
 if __name__ == '__main__':
-    LOOP.run_until_complete(main("https://www.777zw.net/0/230/"))
+    LOOP.run_until_complete(main(input("请输入小说地址：")))

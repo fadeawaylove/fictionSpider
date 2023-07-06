@@ -25,6 +25,25 @@ SOURCE_LIST = [
         cover_xpath='//div[@class="imgbox"]/img/@src',
         replace_string_list=["<p>(三七中文 www.37zw.net)</p>", "<p>〖三七中文 www.37zw.com〗百度搜索“37zw”访问</p>"]
     ),
+    FictionSourceModel(
+        name="和图书",
+        home="https://www.hetushu.com",
+        desc="效果不错，但是网页响应太慢了~",
+        cover_xpath='//*[@id="left"]/div[1]/img/@src',
+        list_xpath='//*[@id="dir"]/dd/a',
+        content_xpath='//*[@id="content"]',
+        ext_headers={"Referer": "https://www.hetushu.com"},
+        rate_count=5
+    ),
+    FictionSourceModel(
+        name="养鬼为祸",
+        home="http://www.xygwh.cc",
+        # cover_xpath='/html/body/div[4]/div[2]/div[1]/img/@src',
+        list_xpath='//div[@class="listmain"]/dl/dd[position() > 9]/a',
+        content_xpath='//*[@id="content"]',
+        replace_string_list=["请记住本书首发域名：www.yangguiweihuo.com。笔趣阁手机版阅读网址：m.yangguiweihuo.com",
+                             '<div align="center"><a href="javascript:posterror();" style="text-align:center;color:red;">章节错误,点此举报(免注册)我们会尽快处理.</a>举报后请耐心等待,并刷新页面。</div>']
+    ),
 ]
 
 #     xpath_map = {
