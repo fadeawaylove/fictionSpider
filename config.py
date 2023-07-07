@@ -4,9 +4,11 @@ from models import FictionSourceModel
 SOURCE_LIST = [
     FictionSourceModel(
         name="快书库",
-        home="http://www.kuaishuku.net/",
+        home="https://www.kuaishuku.net/",
         list_xpath='//*[@id="stylechapter"]/li/a',
-        content_xpath='//div[@class="book-content"]'
+        content_xpath='//div[@class="book-content"]',
+        author_xpath='//div[@class="bookinfo-info"]/h3/a',
+        intro_xpath='//div[@class="intro"]/p'
     ),
     FictionSourceModel(
         name="三七中文",
@@ -14,6 +16,8 @@ SOURCE_LIST = [
         list_xpath='//div[@class="section-box"]/ul/li/a',
         content_xpath='//*[@id="content"]',
         cover_xpath='//div[@class="imgbox"]/img/@src',
+        author_xpath='//div[@class="info"]/div/div/p[1]',
+        intro_xpath='/html/body/div[3]/div[1]/div/div/div[2]/div[2]',
         replace_string_list=["<p>(三七中文 www.37zw.net)</p>", "<p>〖三七中文 www.37zw.com〗百度搜索“37zw”访问</p>"]
 
     ),
@@ -23,6 +27,8 @@ SOURCE_LIST = [
         list_xpath='//div[@class="section-box"]/ul/li/a',
         content_xpath='//*[@id="content"]',
         cover_xpath='//div[@class="imgbox"]/img/@src',
+        author_xpath='//div[@class="info"]/div/div/p[1]',
+        intro_xpath='/html/body/div[3]/div[1]/div/div/div[2]/div[2]',
         replace_string_list=["<p>(三七中文 www.37zw.net)</p>", "<p>〖三七中文 www.37zw.com〗百度搜索“37zw”访问</p>"]
     ),
     FictionSourceModel(
@@ -52,7 +58,20 @@ SOURCE_LIST = [
             "章节报错（免登陆）"
         ],
         ext_headers={"Referer": "https://www.beqege.com"},
-
+        intro_xpath='//*[@id="intro"]',
+        author_xpath='//*[@id="info"]/p[1]/a'
+    ),
+    FictionSourceModel(
+        name="笔趣阁www.bbiquge.net",
+        home="https://www.bbiquge.net",
+        list_xpath='//div[@class="zjbox"]/dl/dd/a',
+        content_xpath='//*[@id="content"]',
+        replace_string_list=[
+            " 笔趣阁 www.bbiquge.net，最快更新"
+        ],
+        ext_headers={"Referer": "https://www.beqege.com"},
+        all_page_xpath='//select[@class="form-control"]/option/@value',
+        intro_xpath='//*[@id="intro"]'
     ),
 ]
 

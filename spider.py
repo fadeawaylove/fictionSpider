@@ -3,14 +3,15 @@ import datetime
 import os
 import re
 from urllib.parse import urlsplit, urljoin
-
+from bs4 import BeautifulSoup
 from ebooklib import epub
-from lxml import etree
+from lxml import etree, html as HTML
 from tqdm import tqdm
 
 from config import SOURCE_LIST
 from http_client import HttpClient
-from utils import remove_tags, remove_links
+from utils import remove_tags, remove_links, run_parallel_with_sem, extract_text_from_html, trans_element_to_string, \
+    extract_text_from_ele
 
 LOOP = asyncio.get_event_loop()
 
@@ -43,11 +44,6 @@ def replace_invalid_chars(filename: str):
     return filename
 
 
-def _get_ele_string(ele) -> str:
-    result = etree.tostring(ele, encoding="unicode", method="html")
-    return result
-
-
 def get_source_model(url: str):
     for m in SOURCE_LIST:
         if url.startswith(m.home):
@@ -72,6 +68,7 @@ class FictionSpider:
         self.test_cnt = test_cnt
         self.epub_book = epub.EpubBook()
         self.chapter_name_set = set()
+        self.cover_img_path = "cover.jpg"
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51",
             **self.source_model.ext_headers
@@ -84,9 +81,9 @@ class FictionSpider:
         title = html.xpath(self.source_model.title_xpath)
         for t in title:
             if t.text:
-                self.name = t.text
+                self.name = t.text.strip()
+                self.epub_book.set_title(self.name)
                 break
-        # print(f"从{self.source_model.title_xpath}获取小说名 => {self.name}")
         if not self.name:
             raise Exception("获取小说名失败")
 
@@ -101,30 +98,82 @@ class FictionSpider:
 
         # 设置封面
         cover_content = await HttpClient.get(cover_url, headers=self.headers, return_type="raw")
-        self.epub_book.set_cover('cover.jpg', cover_content)
+        self.epub_book.set_cover(self.cover_img_path, cover_content)
 
-    async def get_chapter_list_html(self):
-        content = await HttpClient.get(self.base_url, headers=self.headers, return_type="raw")
-        return etree.HTML(content)
+    def add_chapter(self, chapter_name, chapter_content):
+        xhtml_name = f'{chapter_name}.xhtml'
+        chapter = epub.EpubHtml(title=chapter_name, file_name=xhtml_name, lang='en')
+        chapter.content = chapter_content
+        self.epub_book.add_item(chapter)
+        self.epub_book.spine.append(chapter)
+        self.epub_book.toc.append(epub.Link(xhtml_name, chapter_name, chapter_name))
 
-    async def get_chapter_list(self, html):
-        chapter_xpath = self.source_model.list_xpath
-        if not chapter_xpath:
-            print(f"不支持：{self.host}")
-            return False
+    def set_intro(self, html):
+        """设置介绍页"""
+        intro_img_str = f'''
+        <div style="text-align: center;">
+            <img src="{self.cover_img_path}" style="display: inline-block;"/>
+        </div>
+        '''
+        intro_text = ""
+        intro_source_str = f'''
+        <div style="text-align: center;">
+            <a href="{self.base_url}" style="display: inline-block;">来源：{self.base_url}</a>
+        </div>
+        '''
+        intro_xpath = self.source_model.intro_xpath
+        if intro_xpath:
+            intro_ele = html.xpath(intro_xpath)
+            if intro_ele:
+                intro_ele = intro_ele[0]
+                intro_text = trans_element_to_string(intro_ele)
 
-        chapter_list = html.xpath(chapter_xpath)
-        # print(f"xpath=>{chapter_xpath},共计{len(chapter_list)}章。")
-        chapter_list = [(chapter.text.strip(), urljoin(self.base_url, chapter.get("href")))
-                        for chapter in chapter_list]
-        return chapter_list
+        intro_str = intro_img_str + intro_text + intro_source_str
+        self.add_chapter("简介", intro_str)
+
+    def set_author(self, html):
+        if not (author_xpath := self.source_model.author_xpath):
+            return
+        if not (author := html.xpath(author_xpath)):
+            return
+        author_ele = author[0]
+        if author_text := extract_text_from_ele(author_ele):
+            author_text = author_text.split("：")[-1]
+            self.epub_book.add_author(author_text)
+
+    async def get_chapter_list_html(self, url=None):
+        u = url or self.base_url
+        if not u.startswith("http"):
+            u = urljoin(self.base_url, u)
+        content = await HttpClient.get(u, headers=self.headers, return_type="raw")
+        return HTML.fromstring(content)
+
+    async def get_chapter_list(self, first_html):
+        html_list = [first_html]
+        if self.source_model.all_page_xpath:
+            all_page_url_list = first_html.xpath(self.source_model.all_page_xpath)
+            tasks = [self.get_chapter_list_html(x) for x in all_page_url_list]
+            temp_list = await run_parallel_with_sem(tasks, sem_count=self.sem_count)
+            html_list += temp_list
+
+        result = []
+        for html in html_list:
+            chapter_xpath = self.source_model.list_xpath
+            if not chapter_xpath:
+                print(f"不支持：{self.host}")
+                return False
+            chapter_list = html.xpath(chapter_xpath)
+            chapter_list = [(chapter.text.strip(), urljoin(self.base_url, chapter.get("href")))
+                            for chapter in chapter_list]
+            result += chapter_list
+        return result
 
     async def get_chapter_content(self, chapter_url: str) -> str:
         """获取章节的页面内容"""
         resp_content = await HttpClient.get(chapter_url, headers=self.headers, return_type="raw")
         html = etree.HTML(resp_content)
         content_ele = html.xpath(self.source_model.content_xpath)[0]
-        content_str = _get_ele_string(content_ele)
+        content_str = trans_element_to_string(content_ele)
         content_str = self._process_replace_string(content_str)
         content_str = self._process_include_tags(content_str)
         content_str = self._process_include_links(content_str)
@@ -167,32 +216,30 @@ class FictionSpider:
             self.pbar.set_postfix_str(f"跳过【{chapter_name}】，原因{chapter_content}")
             self.pbar.update(1)
             return
-        xhtml_name = f'{chapter_name}.xhtml'
-        chapter = epub.EpubHtml(title=chapter_name, file_name=xhtml_name, lang='en')
-        chapter.content = chapter_content
-        self.epub_book.add_item(chapter)
-        self.epub_book.spine.append(chapter)
-        self.epub_book.toc.append(epub.Link(xhtml_name, chapter_name, chapter_name))
 
+        self.add_chapter(chapter_name, chapter_content)
         self.pbar.set_postfix_str(f"写入【{chapter_name}】，长度{len(chapter_content)}")
         self.pbar.update(1)
 
     async def run(self):
         html = await self.get_chapter_list_html()
 
-        self.set_title(html)
         await self.set_cover(html)
+        self.set_title(html)
+        self.set_intro(html)
+        self.set_author(html)
 
         chapter_list = await self.get_chapter_list(html)
         if not chapter_list:
             print("未获取到任何章节！")
             return
+        file_name = self.name
         if self.is_test:
-            self.name += f"_测试"
+            file_name += f"_测试"
             chapter_list = chapter_list[:self.test_cnt]
         chapter_cnt = len(chapter_list)
 
-        self.pbar = tqdm(total=chapter_cnt, postfix=f"开始采集《{self.name}》", unit="章", desc=f"采集《{self.name}》")
+        self.pbar = tqdm(total=chapter_cnt, postfix=f"开始采集《{file_name}》", unit="章", desc=f"采集《{file_name}》")
 
         chapter_tasks = [self.get_one_chapter_info(*chapter) for chapter in chapter_list]
         await batch_run_tasks(chapter_tasks, call_back=self.add_chapter_to_book, batch_size=self.sem_count)
@@ -202,7 +249,7 @@ class FictionSpider:
 
         dir_name = os.path.join("epubs", get_formatted_time("%Y-%m-%d"))
         os.makedirs(dir_name, exist_ok=True)
-        file_name = self.name + f"_{self.source_model.name}" + ".epub"
+        file_name = file_name + f"_{self.source_model.name}" + ".epub"
         out_name = self.get_unique_file_path(os.path.join(dir_name, file_name))
         self.pbar.set_postfix_str(f"合成文件：{out_name}")
         epub.write_epub(out_name, self.epub_book, {})

@@ -14,3 +14,6 @@ class FictionSourceModel(BaseModel):
     include_tag_list: list = ["div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "br"]  # 内容包含的标签列表，不在此列表中的标签会被移除
     rate_count: int = 20  # 采集速率，每批次采集多少章
     begin_title: bool = True  # 在章节内容开始加上一个章节名
+    all_page_xpath: str = ""  # 所有章节列表的xpath
+    intro_xpath: str = ""  # 小说简介
+    author_xpath: str = ""  # 作者名
