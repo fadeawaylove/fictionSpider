@@ -10,6 +10,7 @@ class ChapterListModel(BaseModel):
 class ChapterContentModel(BaseModel):
     name: str
     content: str
+    next_page: str = ""
 
 
 class BookInfoModel(BaseModel):

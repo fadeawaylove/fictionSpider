@@ -18,9 +18,21 @@ class GrabFlow:
         self.book = EpubHelper()
         self.cover_path = "cover.jpg"
 
+    async def _get_chapter_content_next_page(self, cm):
+        content = await http_client.get(cm.next_page)
+        content_model = self.parser.parse_chapter_text(content, cm.name, add_title=False)
+        return content_model
+
     async def _get_chapter_content(self, list_model: ChapterListModel) -> ChapterContentModel:
         content = await http_client.get(list_model.cha_url)
         content_model = self.parser.parse_chapter_text(content, list_model.cha_name)
+
+        next_page = content_model.next_page
+        while next_page:
+            next_content_model = await self._get_chapter_content_next_page(content_model)
+            content_model.content += next_content_model.content
+            next_page = next_content_model.next_page
+
         return content_model
 
     async def _get_chapter_list(self, book_info: BookInfoModel) -> AsyncIterable[ChapterContentModel]:
