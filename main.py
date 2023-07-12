@@ -1,13 +1,12 @@
 import asyncio
 
-from spider import FictionSpider
+from src.flow import GrabFlow
 
 LOOP = asyncio.get_event_loop()
 
 
 async def main(url):
-    spider = FictionSpider(url)
-    await spider.run()
+    await GrabFlow(url).start()
 
 
 if __name__ == '__main__':

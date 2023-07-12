@@ -1,6 +1,6 @@
 aiohttp==3.8.4
 EbookLib==0.18
 lxml==4.9.2
-pydantic==1.10.9
+pydantic==2.0.2
 tqdm==4.65.0
 beautifulsoup4==4.12.2
