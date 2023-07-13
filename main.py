@@ -1,8 +1,5 @@
-import asyncio
-
+from src.loop import LOOP
 from src.flow import GrabFlow
-
-LOOP = asyncio.get_event_loop()
 
 
 async def main(url):

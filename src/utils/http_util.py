@@ -1,11 +1,12 @@
 import asyncio
 import atexit
 from aiohttp import ClientTimeout, ClientSession, TCPConnector
+from src.loop import LOOP
 
 
 @atexit.register
 def close_session():
-    asyncio.get_event_loop().run_until_complete(HttpClient.close_session())
+    LOOP.run_until_complete(HttpClient.close_session())
 
 
 class HttpClient:
@@ -13,7 +14,8 @@ class HttpClient:
     一个应用中共用一个session,用于提高效率
     """
     _connector = TCPConnector(limit=2000)
-    _session = ClientSession(timeout=ClientTimeout(60),
+    _session = ClientSession(loop=LOOP,
+                             timeout=ClientTimeout(60),
                              raise_for_status=True,
                              connector=_connector)
 

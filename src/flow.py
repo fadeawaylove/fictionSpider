@@ -27,11 +27,10 @@ class GrabFlow:
         content = await http_client.get(list_model.cha_url)
         content_model = self.parser.parse_chapter_text(content, list_model.cha_name)
 
-        next_page = content_model.next_page
-        while next_page:
+        while content_model.next_page:
             next_content_model = await self._get_chapter_content_next_page(content_model)
             content_model.content += next_content_model.content
-            next_page = next_content_model.next_page
+            content_model.next_page = next_content_model.next_page
 
         return content_model
 

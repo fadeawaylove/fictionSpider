@@ -1,8 +1,10 @@
 import asyncio
-import re
-import os
 import datetime
+import os
+import re
 from urllib.parse import urlparse
+
+from src.loop import LOOP
 
 
 def extract_host(url):
@@ -76,4 +78,4 @@ path_join = os.path.join
 
 os_makedirs = os.makedirs
 
-async_run = asyncio.get_event_loop().run_until_complete
+async_run = LOOP.run_until_complete
