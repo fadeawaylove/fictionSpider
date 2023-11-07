@@ -21,7 +21,7 @@ def replace_invalid_chars(filename: str):
     return filename
 
 
-async def batch_run_tasks(task_list, batch_size: int = 20):
+async def batch_run_tasks(task_list, batch_size: int = 10):
     for i in range(0, len(task_list), batch_size):
         temp_task_list = task_list[i:i + batch_size]
         temp_res_list = await asyncio.gather(*temp_task_list)

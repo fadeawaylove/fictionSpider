@@ -72,6 +72,7 @@ class HttpClient:
             async with cls._session.request(method,
                                             url,
                                             **kwargs,
+                                            verify_ssl=False,
                                             trace_request_ctx=trace_request_ctx) as resp:
                 resp.raise_for_status()
                 if return_type == "json":
